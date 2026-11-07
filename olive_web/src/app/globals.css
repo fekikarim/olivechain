@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --ground: #edefe4;
+  --surface: #e0e5d0;
+  --surface-2: #d3dabd;
+  --ink: #18220f;
+  --muted: #475239;
+  --olive: #3d5a1c;
+  --deep: #1a2910;
+  --oil: #d6b13a;
+  --bad: #9b2c1f;
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-olive: var(--olive);
+  --color-deep: var(--deep);
+  --color-oil: var(--oil);
+  --color-bad: var(--bad);
+  --font-sans: var(--font-bricolage), system-ui, sans-serif;
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+:focus-visible {
+  outline: 3px solid var(--olive);
+  outline-offset: 2px;
+}
+
+::selection { background: var(--oil); color: var(--deep); }
+
+.field {
+  width: 100%;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0.75rem 0.9rem;
+  border-radius: 0;
+}
+.field::placeholder { color: #66715a; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  background: var(--olive); color: #f6f8ee; font-weight: 600;
+  padding: .75rem 1.25rem; border-radius: 0; cursor: pointer;
+  transition: transform .15s ease, background-color .15s ease;
+  min-height: 44px;
+}
+.btn:hover:not(:disabled) { background: var(--deep); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { background: var(--surface-2); color: #5b664d; cursor: not-allowed; }
+.btn-light { background: var(--oil); color: var(--deep); }
+.btn-light:hover:not(:disabled) { background: #f0cd56; }
+.btn-quiet { background: var(--surface-2); color: var(--ink); }
+.btn-quiet:hover:not(:disabled) { background: var(--surface); }
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  .rise { animation: rise .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--i, 0) * 80ms); }
+}

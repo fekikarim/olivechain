@@ -1,0 +1,9 @@
+node_modules/
+build/
+.env
+.next/
+olive_backend/data/
+olive_web/src/contracts/deployments.json
+olive_backend/src/contracts/deployments.json
+*.log
+.DS_Store

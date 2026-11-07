@@ -1,0 +1,17 @@
+{
+  "name": "olive-blockchain",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "compile": "truffle compile",
+    "test": "truffle test",
+    "migrate": "truffle migrate --reset && node scripts/sync-contracts.mjs",
+    "demo": "truffle exec scripts/demo.js"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "5.0.2"
+  },
+  "devDependencies": {
+    "truffle": "5.11.5"
+  }
+}
