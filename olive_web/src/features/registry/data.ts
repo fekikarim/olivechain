@@ -42,3 +42,22 @@ export async function loadRoles(account: string | null): Promise<Roles & { owner
   ]);
   return { owner, escrow, inspector, regulator: !!account && owner.toLowerCase() === account.toLowerCase() };
 }
+
+export type BatchRow = Batch & { history: HistoryItem[]; people: string[] };
+const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
+
+/** All batches, newest first, each with its history and every address involved (custody, inspector, minter). */
+export async function loadBatchRows(): Promise<BatchRow[]> {
+  const r = getContract("BatchRegistry");
+  if (!r) return [];
+  const total = Number(await r.totalBatches());
+  const rows = await Promise.all(
+    Array.from({ length: total }, (_, i) => Promise.all([loadBatch(i + 1), loadHistory(i + 1)])),
+  );
+  return rows
+    .map(([b, h]) => {
+      const values = [b.custodian, ...h.flatMap((x) => Object.values(x.args))].filter((v) => ADDRESS.test(v));
+      return { ...b, history: h, people: [...new Set(values.map((v) => v.toLowerCase()))] };
+    })
+    .reverse();
+}

@@ -3,35 +3,44 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WalletButton } from "./WalletButton";
+import { DemoStatus } from "./DemoStatus";
 
 const links = [
-  { href: "/registry", label: "Registry" },
+  { href: "/journey", label: "Demo" },
+  { href: "/registry", label: "Batches" },
   { href: "/market", label: "Market" },
+  { href: "/people", label: "People" },
   { href: "/guide", label: "Guide" },
 ];
 
 export function Header() {
   const path = usePathname();
   return (
-    <header className="bg-ground">
-      <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-x-8 gap-y-3 px-5 py-4 md:px-8">
-        <div className="flex items-center gap-8">
-          <Link href="/" className="text-2xl font-extrabold tracking-tight text-deep">OliveChain</Link>
-          <nav aria-label="Main" className="flex gap-1">
-            {links.map((l) => (
+    <header className="sticky top-0 z-40 border-b-2 border-surface-2 bg-ground">
+      <div className="mx-auto flex max-w-[1280px] items-center gap-4 px-5 py-2 md:px-8">
+        <Link href="/" className="shrink-0 text-xl font-extrabold tracking-tight text-deep">OliveChain</Link>
+        <nav aria-label="Main" className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+          {links.map((l) => {
+            const active = path.startsWith(l.href);
+            return (
               <Link
                 key={l.href}
                 href={l.href}
-                aria-current={path.startsWith(l.href) ? "page" : undefined}
-                className={`px-3 py-2 font-semibold transition-colors hover:text-olive ${path.startsWith(l.href) ? "bg-surface text-deep" : "text-muted"}`}
+                aria-current={active ? "page" : undefined}
+                className={`flex min-h-10 shrink-0 items-center px-3 font-bold transition-colors ${
+                  active ? "bg-deep text-ground" : "text-deep hover:bg-surface"
+                }`}
               >
                 {l.label}
               </Link>
-            ))}
-          </nav>
+            );
+          })}
+        </nav>
+        <div className="shrink-0">
+          <WalletButton />
         </div>
-        <WalletButton />
       </div>
+      <DemoStatus />
     </header>
   );
 }

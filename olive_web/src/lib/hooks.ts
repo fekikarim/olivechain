@@ -68,3 +68,25 @@ export function useWrite() {
     return c;
   }, [w]);
 }
+
+/**
+ * Sends a contract transaction after a read-only dry run from the acting account.
+ * The dry run decodes custom errors (for example NotInspector) before MetaMask is asked,
+ * so the user sees the reason instead of "missing revert data".
+ */
+export function useSend() {
+  const w = useWallet();
+  return useCallback(async (name: ContractName, method: string, args: unknown[]) => {
+    if (!w.account) throw new Error("Connect MetaMask or act as a demo user first.");
+    if (!w.onOliveChain) throw new Error("Switch to OliveChain (chain 1337) first.");
+    const read = getContract(name);
+    if (!read) throw new Error(`${name} is not deployed. Run npm run migrate in olive_blockchain.`);
+    try {
+      await read.getFunction(method).staticCall(...args, { from: w.account });
+    } catch (e) {
+      throw new Error(errorMessage(e));
+    }
+    const c = getContract(name, await w.getSigner())!;
+    return c.getFunction(method)(...args);
+  }, [w]);
+}

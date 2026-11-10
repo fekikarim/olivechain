@@ -1,136 +1,154 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { isAddress } from "ethers";
-import { Panel, Label } from "@/components/Section";
+import { useState } from "react";
+import Link from "next/link";
+import { CopyButton } from "@/components/CopyButton";
 import { TxNote } from "@/components/TxNote";
-import { useLoad, useTx, useWrite } from "@/lib/hooks";
-import { useWallet } from "@/lib/wallet";
-import { hashRecord, olv, same, short, canonicalJson, type CheckpointRecord } from "@/lib/format";
-import { getRecord, postRecord } from "@/lib/api";
-import { loadBatch, loadHistory, type HistoryItem } from "./data";
+import { Callout, Chip, Gate, Label, Panel } from "@/components/ui";
+import { postRecord } from "@/lib/api";
+import { hashRecord, olv, same, short, type CheckpointRecord } from "@/lib/format";
+import { useSend, useTx } from "@/lib/hooks";
+import { labelOf } from "@/lib/roles";
+import type { BatchRow } from "./data";
 
-const TITLES: Record<string, string> = {
+type Perms = { inspector: boolean; regulator: boolean };
+const EVENT_TITLE: Record<string, string> = {
   BatchMinted: "Minted",
-  CustodyTransferred: "Custody transferred",
+  CustodyTransferred: "Custody passed on",
   CheckpointAdded: "Quality checkpoint",
   BatchCertified: "Certified",
   PriceRecorded: "Price recorded",
 };
 
-function describe(h: HistoryItem, record?: CheckpointRecord | null): string {
-  const a = h.args;
-  switch (h.event) {
-    case "BatchMinted": return `farmer ${short(a.farmer)} → custodian ${short(a.custodian)}`;
-    case "CustodyTransferred": return `${short(a.from)} → ${short(a.to)}`;
-    case "CheckpointAdded":
-      return record
-        ? `acidity ${record.acidity}%, polyphenols ${record.polyphenols} mg/kg, ${record.location}, by ${short(a.inspector)}`
-        : `hash ${short(a.dataHash)} by ${short(a.inspector)}`;
-    case "BatchCertified": return `inspector ${short(a.inspector)}`;
-    case "PriceRecorded": return `${olv(a.price)} OLV`;
-    default: return "";
-  }
-}
-
-export function BatchDetail({ id, isInspector, onChanged }: { id: number; isInspector: boolean; onChanged: () => void }) {
-  const { account } = useWallet();
-  const write = useWrite();
-  const batch = useLoad(() => loadBatch(id), [id]);
-  const history = useLoad(() => loadHistory(id), [id]);
-  const [records, setRecords] = useState<Record<string, CheckpointRecord | null>>({});
-  const [next, setNext] = useState("");
+export function BatchDetail({
+  row, account, accounts, perms, onChanged,
+}: { row: BatchRow; account: string | null; accounts: string[] | null | undefined; perms: Perms | null; onChanged: () => void | Promise<void> }) {
+  const send = useSend();
+  const move = useTx(onChanged);
+  const cp = useTx(onChanged);
+  const cert = useTx(onChanged);
+  const [to, setTo] = useState("");
   const [acidity, setAcidity] = useState("0.3");
   const [poly, setPoly] = useState("320");
   const [where, setWhere] = useState("Sfax");
-  const [lastRecord, setLastRecord] = useState<{ record: CheckpointRecord; hash: string } | null>(null);
 
-  const refresh = async () => { await Promise.all([batch.reload(), history.reload()]); onChanged(); };
-  const move = useTx(refresh);
-  const check = useTx(refresh);
-  const cert = useTx(refresh);
+  const holder = row.custodian;
+  const holderName = labelOf(holder, accounts);
+  const iHold = same(account, holder);
+  const isInspector = !!perms?.inspector;
+  const others = (accounts ?? []).filter((a) => !same(a, holder));
+  const a = Number(acidity);
+  const p = Number(poly);
+  const cpValid = acidity.trim() !== "" && poly.trim() !== "" && Number.isFinite(a) && Number.isFinite(p) && where.trim() !== "";
 
-  useEffect(() => {
-    const hashes = (history.data ?? []).filter((h) => h.event === "CheckpointAdded").map((h) => h.args.dataHash);
-    hashes.forEach((hash) => getRecord(hash).then((r) => setRecords((prev) => ({ ...prev, [hash]: r }))));
-  }, [history.data]);
-
-  const b = batch.data;
-  if (!b) return <Panel title={`Batch #${id}`}><p>{batch.error ?? "Loading…"}</p></Panel>;
-  const isCustodian = same(account, b.custodian);
-  const acidityN = Number(acidity), polyN = Number(poly);
-  const recordValid = acidity !== "" && poly !== "" && Number.isFinite(acidityN) && Number.isFinite(polyN) && where.trim() !== "";
-
-  async function addCheckpoint() {
-    const record: CheckpointRecord = { batchId: id, acidity: acidityN, polyphenols: polyN, location: where.trim(), timestamp: Math.floor(Date.now() / 1000) };
-    const hash = hashRecord(record);
-    const ok = await check.run("Checkpoint recorded", async () => (await write("BatchRegistry")).addCheckpoint(id, hash));
-    if (ok) { await postRecord(record); setLastRecord({ record, hash }); history.reload(); }
+  async function saveCheckpoint() {
+    const record: CheckpointRecord = { batchId: row.id, acidity: a, polyphenols: p, location: where.trim(), timestamp: Math.floor(Date.now() / 1000) };
+    const ok = await cp.run("Checkpoint recorded", () => send("BatchRegistry", "addCheckpoint", [row.id, hashRecord(record)]));
+    if (ok) await postRecord(record);
   }
 
+  const next = !row.certified
+    ? isInspector ? "Next: record the quality checkpoint and certify the batch below." : "Next: the inspector records a checkpoint and certifies this batch."
+    : iHold ? "Certified. You hold it: pass it on, or list it for sale on the Market page."
+      : `Certified. Next: ${holderName} passes it on, or lists it for sale on the Market page.`;
+
   return (
-    <div className="grid gap-4">
-      <Panel title={`Batch #${id}`} tone="deep">
-        <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
-          <div><dt className="text-sm text-ground/70">Custodian</dt><dd className="break-all font-semibold">{b.custodian}{isCustodian && " (you)"}</dd></div>
-          <div><dt className="text-sm text-ground/70">Last price</dt><dd className="text-3xl font-extrabold text-oil">{olv(b.lastPrice)} OLV</dd></div>
-          <div><dt className="text-sm text-ground/70">Quality</dt><dd className="font-semibold">{b.certified ? "Certified (Extra Virgin)" : "Not certified"}</dd></div>
-          <div><dt className="text-sm text-ground/70">Metadata</dt><dd className="break-all">{b.uri}</dd></div>
+    <>
+      <div className="bg-deep p-6 text-ground md:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-3xl font-extrabold tracking-tight">Batch #{row.id}</h2>
+          {row.certified ? <Chip tone="ok">Certified (Extra Virgin)</Chip> : <Chip tone="warn">Not certified yet</Chip>}
+        </div>
+        <dl className="mt-6 grid gap-5 sm:grid-cols-2">
+          <div>
+            <dt className="text-sm font-bold text-ground/70">Last price</dt>
+            <dd className="text-4xl font-extrabold text-oil">{olv(row.lastPrice)} OLV</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-bold text-ground/70">Held by</dt>
+            <dd className="text-xl font-bold">{holderName} {iHold && <Chip tone="warn">you</Chip>}</dd>
+            <dd className="mt-1 flex flex-wrap items-center gap-2 font-mono text-sm text-ground/80">
+              {short(holder)} <CopyButton value={holder} label="Copy" />
+            </dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-sm font-bold text-ground/70">Description</dt>
+            <dd className="break-all">{row.uri}</dd>
+          </div>
         </dl>
+      </div>
+
+      <Callout tone="info">{next}</Callout>
+
+      <Panel title="Pass the batch on">
+        <Gate
+          allowed={iHold}
+          reason={!account ? "Connect MetaMask or act as a demo user to transfer." : <>Only the current holder ({holderName}) can pass this batch on. You are not the holder.</>}
+        >
+          <div>
+            <Label htmlFor="to-pick">New holder</Label>
+            <select id="to-pick" className="field" value={to} onChange={(e) => setTo(e.target.value)}>
+              <option value="">Choose an account…</option>
+              {others.map((o) => <option key={o} value={o}>{labelOf(o, accounts)} · {short(o)}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <button type="button" className="btn" disabled={!to || move.pending} onClick={() => move.run("Custody passed on", () => send("BatchRegistry", "transferCustody", [row.id, to]))}>
+              Pass the batch on
+            </button>
+            <TxNote {...move} />
+          </div>
+        </Gate>
       </Panel>
 
-      <Panel title="Transfer custody">
-        {!isCustodian && <p className="mb-3 bg-surface-2 p-3 text-sm font-medium">You are not the custodian: the contract will reject this.</p>}
-        <Label htmlFor="next">New custodian address</Label>
-        <input id="next" className="field" placeholder="0x…" value={next} onChange={(e) => setNext(e.target.value.trim())} />
-        <div className="mt-3 flex flex-wrap items-center gap-4">
-          <button className="btn" disabled={!isAddress(next) || move.pending} onClick={() => move.run("Custody transferred", async () => (await write("BatchRegistry")).transferCustody(id, next))}>Transfer</button>
-          <TxNote {...move} />
-        </div>
-      </Panel>
-
-      <Panel title="Quality checkpoint">
-        {!isInspector && <p className="mb-3 bg-surface-2 p-3 text-sm font-medium">You are not an inspector: the contract will reject this.</p>}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div><Label htmlFor="ac">Acidity (%)</Label><input id="ac" className="field" inputMode="decimal" value={acidity} onChange={(e) => setAcidity(e.target.value)} /></div>
-          <div><Label htmlFor="po">Polyphenols (mg/kg)</Label><input id="po" className="field" inputMode="decimal" value={poly} onChange={(e) => setPoly(e.target.value)} /></div>
-          <div><Label htmlFor="lo">Location</Label><input id="lo" className="field" value={where} onChange={(e) => setWhere(e.target.value)} /></div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-4">
-          <button className="btn" disabled={!recordValid || check.pending} onClick={addCheckpoint}>Add checkpoint</button>
-          <TxNote {...check} />
-        </div>
-        {lastRecord && (
-          <div className="mt-4 bg-surface-2 p-3 text-sm">
-            <p className="font-semibold">Off-chain record (kept by the backend)</p>
-            <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all">{canonicalJson(lastRecord.record)}</pre>
-            <p className="mt-1 break-all">On-chain hash: {lastRecord.hash}</p>
+      <Panel title="Inspection and certification">
+        <Gate
+          allowed={isInspector}
+          reason={!account ? "Connect MetaMask or act as a demo user to inspect." : <>Only an inspector can record checkpoints and certify. <Link href="/people" className="font-bold underline underline-offset-4">Act as the Inspector</Link> on the People page.</>}
+        >
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div><Label htmlFor="ac">Acidity (%)</Label><input id="ac" className="field" inputMode="decimal" value={acidity} onChange={(e) => setAcidity(e.target.value)} /></div>
+            <div><Label htmlFor="po">Polyphenols (mg/kg)</Label><input id="po" className="field" inputMode="decimal" value={poly} onChange={(e) => setPoly(e.target.value)} /></div>
+            <div><Label htmlFor="lo">Location</Label><input id="lo" className="field" value={where} onChange={(e) => setWhere(e.target.value)} /></div>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <button type="button" className="btn btn-ghost" disabled={!cpValid || cp.pending} onClick={saveCheckpoint}>Record checkpoint</button>
+            <TxNote {...cp} />
+          </div>
+        </Gate>
+        {!row.certified && (
+          <div className="mt-6 border-t-2 border-surface-2 pt-6">
+            <Gate allowed={isInspector} reason="Only an inspector can certify.">
+              <div className="flex flex-wrap items-center gap-4">
+                <button type="button" className="btn" disabled={cert.pending} onClick={() => cert.run("Batch certified", () => send("BatchRegistry", "certifyBatch", [row.id]))}>Certify batch</button>
+                <TxNote {...cert} />
+              </div>
+            </Gate>
           </div>
         )}
       </Panel>
-
-      {!b.certified && (
-        <Panel title="Certify batch">
-          {!isInspector && <p className="mb-3 bg-surface-2 p-3 text-sm font-medium">You are not an inspector: the contract will reject this.</p>}
-          <div className="flex flex-wrap items-center gap-4">
-            <button className="btn" disabled={cert.pending} onClick={() => cert.run("Batch certified", async () => (await write("BatchRegistry")).certifyBatch(id))}>Certify</button>
-            <TxNote {...cert} />
-          </div>
-        </Panel>
-      )}
 
       <Panel title="History">
-        {history.loading ? <p>Loading…</p> : (
-          <ol className="grid gap-2">
-            {(history.data ?? []).map((h) => (
-              <li key={`${h.block}-${h.index}`} className="bg-ground p-3">
-                <p className="font-semibold">{TITLES[h.event] ?? h.event} <span className="font-normal text-muted">· block {h.block}</span></p>
-                <p className="break-words text-sm text-muted">{describe(h, h.event === "CheckpointAdded" ? records[h.args.dataHash] : undefined)}</p>
-              </li>
-            ))}
-          </ol>
-        )}
+        <ol className="grid gap-2">
+          {row.history.map((h) => (
+            <li key={`${h.block}-${h.index}`} className="bg-ground p-4">
+              <p className="font-bold">{EVENT_TITLE[h.event] ?? h.event} <span className="font-normal text-muted">· block {h.block}</span></p>
+              <p className="break-words text-sm text-muted">{describe(h.event, h.args, accounts)}</p>
+            </li>
+          ))}
+        </ol>
       </Panel>
-    </div>
+    </>
   );
+}
+
+function describe(event: string, a: Record<string, string>, accounts: string[] | null | undefined): string {
+  switch (event) {
+    case "BatchMinted": return `Minted by ${labelOf(a.farmer, accounts)}`;
+    case "CustodyTransferred": return `${labelOf(a.from, accounts)} → ${labelOf(a.to, accounts)}`;
+    case "CheckpointAdded": return `Recorded by ${labelOf(a.inspector, accounts)} (hash ${short(a.dataHash)})`;
+    case "BatchCertified": return `Certified by ${labelOf(a.inspector, accounts)}`;
+    case "PriceRecorded": return `${olv(a.price)} OLV`;
+    default: return "";
+  }
 }

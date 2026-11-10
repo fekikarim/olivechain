@@ -6,7 +6,7 @@ const chain = [
   { who: "Farmer", what: "Harvests the olives and mints the lot as an NFT with a declared price." },
   { who: "Mill operator", what: "Cold-presses the olives. An inspector records acidity and polyphenols." },
   { who: "Distributor", what: "Bottles the certified oil and lists it. The escrow refuses a price over the cap." },
-  { who: "Grocery", what: "Deposits OLV. Once custody moves, the distributor is paid and the price is recorded." },
+  { who: "Grocery", what: "Deposits OLV. Once the batch arrives, the distributor is paid and the price is recorded." },
 ];
 
 export default function Home() {
@@ -20,9 +20,10 @@ export default function Home() {
               OliveChain follows a lot of olive oil from the grove to the shelf as an NFT, and pays for it in OLV through an escrow that refuses unfair markups.
             </p>
             <div className="rise mt-8 flex flex-wrap gap-3" style={{ ["--i" as string]: 2 }}>
-              <Link href="/registry" className="btn btn-light">Open the registry</Link>
+              <Link href="/journey" className="btn btn-light">Start the guided demo</Link>
               <Link href="/guide" className="btn btn-quiet">Read the guide</Link>
             </div>
+            <p className="rise mt-4 text-ground/70" style={{ ["--i" as string]: 3 }}>Eight steps, about ten minutes. Every step names the MetaMask account to use.</p>
           </div>
           <OliveArt className="rise w-full" />
         </div>

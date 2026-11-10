@@ -6,7 +6,7 @@ Stack: Ganache GUI (127.0.0.1:7545, net 5777, chain 1337) · Truffle 5.11 (solc 
 
 ## Current State
 - Last completed: Batches 1-5 and 6.1-6.3 (automated)
-- Next: manual MetaMask walkthrough (todo/manual-test-A.md + todo/DEMO flow in /guide); optional polish
+- Next (batch 7 done): manual MetaMask walkthrough of /journey (todo/manual-test-A.md + todo/DEMO flow in /guide); optional polish
 - Open problems: MetaMask-signed UI flows not exercised by automation (no extension in the test browser); no gas reporter plugin (truffle has none built in)
 - Updated: 2026-11-07
 
@@ -49,6 +49,24 @@ Status: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 - [x] 6.1 `npm run build` web ok, tests all green
 - [x] 6.2 Full E2E on Ganache (script) + README quick start
 - [x] 6.3 Update this file and todo/README progress
+
+## Batch 7 — UX pass (guided workflow)
+- [x] 7.1 Role lookup from Ganache (`src/lib/roles.ts`): header shows the role name of the connected account
+- [x] 7.2 `/journey` guided demo: 8 steps, progress read from chain, actions inline, account named per step, wrong-account blocking
+- [x] 7.3 Optional "try an unfair price" step shows the escrow refusing a price above the cap
+- [x] 7.4 Rewritten `/guide`: setup checklist, six accounts with copy buttons, steps, expected failures, troubleshooting
+- [x] 7.5 Home, header and Registry/Market hints point to the guided demo
+- [x] 7.6 Step logic checked against 9 chain states (`logic.ts`, run under Node, not committed as a test file)
+- [ ] 7.7 Full MetaMask walkthrough in a real wallet (not possible in the test browser)
+
+## Batch 8 — Identity, demo users and role-scoped views
+- [x] 8.1 Demo users: act as any Ganache account on the People page (testing only); "Connect MetaMask" replaces the demo user
+- [x] 8.2 Sticky header with who you are, and a live status bar: current demo step, who it is for, who you are
+- [x] 8.3 Batches list scoped to the user (My batches / All), clickable cards, eligibility shown per action
+- [x] 8.4 Market: sale cards with progress, gated actions, batch picked from the holder's own batches
+- [x] 8.5 Dry-run before each MetaMask/demo transaction so custom errors are shown, not "missing revert data"
+- [ ] 8.6 Phone header is tall (nav + identity + status bar); collapse into a menu
+- [ ] 8.7 Live test of a rejected action and of the dry-run error text
 
 ## Decisions Log
 - Single ROADMAP.md at repo root (user is both A and B).
