@@ -1,7 +1,7 @@
-import { getContract } from "@/lib/contracts";
+import { getContract, getReadProvider } from "@/lib/contracts";
 
 export type Batch = { id: number; custodian: string; certified: boolean; lastPrice: bigint; uri: string };
-export type HistoryItem = { event: string; block: number; index: number; tx: string; args: Record<string, string> };
+export type HistoryItem = { event: string; block: number; index: number; tx: string; args: Record<string, string>; timestamp: number };
 
 const EVENTS = ["BatchMinted", "CustodyTransferred", "CheckpointAdded", "BatchCertified", "PriceRecorded"] as const;
 
@@ -24,13 +24,19 @@ export async function loadBatches(): Promise<Batch[]> {
 export async function loadHistory(id: number): Promise<HistoryItem[]> {
   const r = getContract("BatchRegistry")!;
   const logs = (await Promise.all(EVENTS.map((e) => r.queryFilter(r.filters[e](id), 0)))).flat();
-  return logs
+  const items = logs
     .map((l) => {
       const log = l as unknown as { fragment: { name: string }; args: { toObject: () => Record<string, unknown> }; blockNumber: number; index: number; transactionHash: string };
       const args = Object.fromEntries(Object.entries(log.args.toObject()).map(([k, v]) => [k, String(v)]));
-      return { event: log.fragment.name, block: log.blockNumber, index: log.index, tx: log.transactionHash, args };
+      return { event: log.fragment.name, block: log.blockNumber, index: log.index, tx: log.transactionHash, args, timestamp: 0 };
     })
     .sort((a, b) => a.block - b.block || a.index - b.index);
+
+  // One block lookup per distinct block gives the real date and time of each event.
+  const provider = getReadProvider();
+  const blocks = [...new Set(items.map((i) => i.block))];
+  const times = new Map(await Promise.all(blocks.map(async (n) => [n, Number((await provider.getBlock(n))?.timestamp ?? 0)] as const)));
+  return items.map((i) => ({ ...i, timestamp: times.get(i.block) ?? 0 }));
 }
 
 export type Roles = { regulator: boolean; inspector: boolean; escrow: string };

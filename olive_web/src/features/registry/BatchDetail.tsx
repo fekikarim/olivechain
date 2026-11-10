@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
 import { TxNote } from "@/components/TxNote";
 import { IconBadge, IconFlask, IconSprout, IconTag, IconTransfer, OlvAmount } from "@/components/Icons";
 import { Callout, Chip, Gate, Label, Panel } from "@/components/ui";
-import { postRecord } from "@/lib/api";
+import { getRecord, postRecord } from "@/lib/api";
 import { hashRecord, olv, same, short, type CheckpointRecord } from "@/lib/format";
-import { useSend, useTx } from "@/lib/hooks";
+import { useLoad, useSend, useTx } from "@/lib/hooks";
 import { labelOf } from "@/lib/roles";
-import type { BatchRow } from "./data";
+import type { BatchRow, HistoryItem } from "./data";
 
 type Perms = { inspector: boolean; regulator: boolean };
 const EVENT_TITLE: Record<string, string> = {
@@ -140,33 +140,86 @@ export function BatchDetail({
 
       <Panel title="History">
         <ol className="grid gap-2">
-          {row.history.map((h) => {
-            const st = EVENT_STYLE[h.event] ?? { Icon: IconTag, cls: "bg-surface-2 text-deep" };
-            return (
-              <li key={`${h.block}-${h.index}`} className="flex items-start gap-4 bg-ground p-4">
-                <span className={`grid size-11 shrink-0 place-items-center ${st.cls}`}>
-                  <st.Icon size={22} />
-                </span>
-                <div className="min-w-0">
-                  <p className="font-bold">{EVENT_TITLE[h.event] ?? h.event} <span className="font-normal text-muted">· block {h.block}</span></p>
-                  <p className="break-words text-sm text-muted">{describe(h.event, h.args, accounts)}</p>
-                </div>
-              </li>
-            );
-          })}
+          {row.history.map((h) => (
+            <HistoryEntry key={`${h.block}-${h.index}`} h={h} accounts={accounts} />
+          ))}
         </ol>
       </Panel>
     </>
   );
 }
 
-function describe(event: string, a: Record<string, string>, accounts: string[] | null | undefined): string {
-  switch (event) {
-    case "BatchMinted": return `Minted by ${labelOf(a.farmer, accounts)}`;
-    case "CustodyTransferred": return `${labelOf(a.from, accounts)} → ${labelOf(a.to, accounts)}`;
-    case "CheckpointAdded": return `Recorded by ${labelOf(a.inspector, accounts)} (hash ${short(a.dataHash)})`;
-    case "BatchCertified": return `Certified by ${labelOf(a.inspector, accounts)}`;
-    case "PriceRecorded": return `${olv(a.price)} OLV`;
-    default: return "";
-  }
+function when(ts: number, block: number): string {
+  if (!ts) return `Block ${block}`;
+  return `${new Date(ts * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} · block ${block}`;
+}
+
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs font-bold uppercase tracking-wide text-muted">{label}</dt>
+      <dd className="break-words font-semibold">{children}</dd>
+    </div>
+  );
+}
+
+/** One event in a batch's history: what happened, who did it, when, and the details behind it. */
+function HistoryEntry({ h, accounts }: { h: HistoryItem; accounts: string[] | null | undefined }) {
+  const st = EVENT_STYLE[h.event] ?? { Icon: IconTag, cls: "bg-surface-2 text-deep" };
+  const a = h.args;
+  const isCheckpoint = h.event === "CheckpointAdded";
+  // Acidity, polyphenols and location live off-chain; the chain only holds their hash.
+  const details = useLoad(() => (isCheckpoint ? getRecord(a.dataHash) : Promise.resolve(null)), [h.event, a.dataHash]);
+
+  return (
+    <li className="flex items-start gap-4 bg-ground p-4">
+      <span className={`grid size-11 shrink-0 place-items-center ${st.cls}`}>
+        <st.Icon size={22} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-bold">{EVENT_TITLE[h.event] ?? h.event}</p>
+        <p className="text-sm text-muted">{when(h.timestamp, h.block)}</p>
+        <dl className="mt-3 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          {h.event === "BatchMinted" && (
+            <>
+              <Fact label="Farmer">{labelOf(a.farmer, accounts)}</Fact>
+              <Fact label="Starting holder">{labelOf(a.custodian, accounts)}</Fact>
+              <Fact label="Description"><span className="font-mono text-sm">{a.metadataURI}</span></Fact>
+            </>
+          )}
+          {h.event === "CustodyTransferred" && (
+            <>
+              <Fact label="Passed by">{labelOf(a.from, accounts)}</Fact>
+              <Fact label="Now held by">{labelOf(a.to, accounts)}</Fact>
+            </>
+          )}
+          {isCheckpoint && (
+            <>
+              <Fact label="Inspector">{labelOf(a.inspector, accounts)}</Fact>
+              <Fact label="Record hash"><span className="font-mono text-sm">{short(a.dataHash)}</span></Fact>
+              {details.loading && <p className="text-sm text-muted sm:col-span-2">Loading the readings…</p>}
+              {!details.loading && details.data && (
+                <>
+                  <Fact label="Acidity">{details.data.acidity}%</Fact>
+                  <Fact label="Polyphenols">{details.data.polyphenols} mg/kg</Fact>
+                  <Fact label="Location">{details.data.location}</Fact>
+                  <Fact label="Sampled">{new Date(details.data.timestamp * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</Fact>
+                </>
+              )}
+              {!details.loading && !details.data && (
+                <p className="text-sm text-muted sm:col-span-2">Readings are stored off-chain. Start the backend to see them.</p>
+              )}
+            </>
+          )}
+          {h.event === "BatchCertified" && <Fact label="Certified by">{labelOf(a.inspector, accounts)}</Fact>}
+          {h.event === "PriceRecorded" && <Fact label="Price"><OlvAmount value={olv(a.price)} size={22} /></Fact>}
+          <Fact label="Transaction">
+            <span className="inline-flex flex-wrap items-center gap-2 font-mono text-sm">
+              {short(h.tx)} <CopyButton value={h.tx} label="Copy" />
+            </span>
+          </Fact>
+        </dl>
+      </div>
+    </li>
+  );
 }
