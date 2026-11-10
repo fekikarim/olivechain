@@ -66,3 +66,8 @@ export const ROLE_TEXT: Record<RoleKey, string> = {
   distributor: "Lists the batch for sale and hands it to the grocery.",
   grocery: "Pays OLV into the escrow and receives the batch.",
 };
+
+/** The demo role an actor stands for, or null for "anyone" (no single account). */
+export function roleOfActor(actor: Actor): RoleKey | null {
+  return actor === "anyone" ? null : actor;
+}

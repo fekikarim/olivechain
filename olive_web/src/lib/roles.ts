@@ -57,3 +57,10 @@ export function labelOf(address: string | null | undefined, accounts: string[] |
   if (i >= 0) return `Spare account ${i + 1}`;
   return short(address);
 }
+
+/** The demo role for an address by its position in the account list, or null for any other account. */
+export function roleKeyFor(address: string | null | undefined, accounts: string[] | null | undefined): RoleKey | null {
+  if (!address || !accounts) return null;
+  const i = accounts.findIndex((a) => a.toLowerCase() === address.toLowerCase());
+  return i >= 0 && i < ROLE_KEYS.length ? ROLE_KEYS[i] : null;
+}

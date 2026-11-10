@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { TxNote } from "@/components/TxNote";
+import { OlvAmount, OlvCoin } from "@/components/Icons";
 import { Callout, Chip, Gate, Label, Panel, Segmented } from "@/components/ui";
 
 import { olv, same, short, toOlv } from "@/lib/format";
@@ -52,7 +53,7 @@ export function MarketView() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="bg-deep p-6 text-ground">
-          <p className="text-sm font-bold text-ground/70">Your OLV</p>
+          <p className="flex items-center gap-2 text-sm font-bold text-ground/70"><OlvCoin size={22} /> Your OLV</p>
           <p className="mt-1 text-4xl font-extrabold text-oil">{account ? olv(m.balance) : "—"}</p>
           <p className="mt-2 text-ground/80">{account ? `${m.symbol} in your account` : "Connect or act as a demo user to see your balance."}</p>
         </div>
@@ -197,7 +198,7 @@ function SaleCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xl font-extrabold">Sale #{s.id} · Batch #{s.batchId}</p>
-          <p className="text-2xl font-extrabold text-olive">{olv(s.price)} OLV</p>
+          <p className="text-2xl font-extrabold text-olive"><OlvAmount value={olv(s.price)} size={26} className="text-olive" /></p>
         </div>
         <Chip tone={chip.tone}>{chip.text}</Chip>
       </div>

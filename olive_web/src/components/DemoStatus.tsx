@@ -7,7 +7,8 @@ import { useLoad } from "@/lib/hooks";
 import { same } from "@/lib/format";
 import { useWallet } from "@/lib/wallet";
 import { labelOf, useAccounts, useRoleAddresses } from "@/lib/roles";
-import { ACTOR_NAME, STEP_TEXT } from "@/features/journey/content";
+import { ACTOR_NAME, roleOfActor, STEP_TEXT } from "@/features/journey/content";
+import { RoleAvatar } from "@/components/Icons";
 import { factsFrom, loadScenario, RESTART_EVENT } from "@/features/journey/data";
 import { buildSteps, isComplete, REQUIRED } from "@/features/journey/logic";
 
@@ -47,7 +48,10 @@ export function DemoStatus() {
       <>
         <span className="font-bold text-oil">Step {REQUIRED.indexOf(active.id) + 1} of {REQUIRED.length}</span>
         <span className="font-semibold">{STEP_TEXT[active.id].title}</span>
-        <span className="text-ground/80">For: {active.actor === "anyone" ? "any account" : actor}</span>
+        <span className="inline-flex items-center gap-2 text-ground/80">
+          <RoleAvatar role={roleOfActor(active.actor)} size={26} />
+          For: {active.actor === "anyone" ? "any account" : actor}
+        </span>
         <span className="text-ground/80">You: {you ?? "nobody yet"}</span>
         {canAct ? (
           <span className="font-bold text-oil">You can do this now</span>

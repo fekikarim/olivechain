@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useWallet } from "@/lib/wallet";
 import { errorMessage, short } from "@/lib/format";
-import { labelOf, useAccounts } from "@/lib/roles";
+import { labelOf, roleKeyFor, useAccounts } from "@/lib/roles";
+import { RoleAvatar } from "@/components/Icons";
 
 export function WalletButton() {
   const w = useWallet();
@@ -12,14 +13,13 @@ export function WalletButton() {
   const [err, setErr] = useState<string | null>(null);
   const act = (fn: () => Promise<void>) => fn().then(() => setErr(null)).catch((e) => setErr(errorMessage(e)));
   const who = w.account ? labelOf(w.account, accounts.data) : null;
-  const initials = who ? who.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase() : "";
   const small = "btn btn-sm";
 
   return (
     <div className="flex items-center gap-2">
       {w.identity ? (
         <div className="flex items-center gap-2" title={w.identity.address}>
-          <span aria-hidden className="grid h-8 w-8 place-items-center bg-deep text-sm font-extrabold text-oil">{initials}</span>
+          <RoleAvatar role={roleKeyFor(w.identity.address, accounts.data)} size={32} />
           <p className="whitespace-nowrap font-extrabold leading-tight">
             {who}
             <span className="ml-1 text-xs font-bold uppercase text-muted">{w.identity.kind === "demo" ? "demo" : "metamask"}</span>

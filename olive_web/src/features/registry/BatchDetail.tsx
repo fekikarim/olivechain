@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
 import { TxNote } from "@/components/TxNote";
+import { IconBadge, IconFlask, IconSprout, IconTag, IconTransfer, OlvAmount } from "@/components/Icons";
 import { Callout, Chip, Gate, Label, Panel } from "@/components/ui";
 import { postRecord } from "@/lib/api";
 import { hashRecord, olv, same, short, type CheckpointRecord } from "@/lib/format";
@@ -18,6 +19,15 @@ const EVENT_TITLE: Record<string, string> = {
   CheckpointAdded: "Quality checkpoint",
   BatchCertified: "Certified",
   PriceRecorded: "Price recorded",
+};
+
+/** One icon and colour per history state, so each step reads at a glance. */
+const EVENT_STYLE: Record<string, { Icon: typeof IconTag; cls: string }> = {
+  BatchMinted: { Icon: IconSprout, cls: "bg-olive text-ground" },
+  CustodyTransferred: { Icon: IconTransfer, cls: "bg-surface-2 text-deep" },
+  CheckpointAdded: { Icon: IconFlask, cls: "bg-surface-2 text-deep" },
+  BatchCertified: { Icon: IconBadge, cls: "bg-deep text-oil" },
+  PriceRecorded: { Icon: IconTag, cls: "bg-oil text-deep" },
 };
 
 export function BatchDetail({
@@ -62,7 +72,7 @@ export function BatchDetail({
         <dl className="mt-6 grid gap-5 sm:grid-cols-2">
           <div>
             <dt className="text-sm font-bold text-ground/70">Last price</dt>
-            <dd className="text-4xl font-extrabold text-oil">{olv(row.lastPrice)} OLV</dd>
+            <dd className="text-4xl font-extrabold text-oil"><OlvAmount value={olv(row.lastPrice)} size={40} className="text-oil" /></dd>
           </div>
           <div>
             <dt className="text-sm font-bold text-ground/70">Held by</dt>
@@ -130,12 +140,20 @@ export function BatchDetail({
 
       <Panel title="History">
         <ol className="grid gap-2">
-          {row.history.map((h) => (
-            <li key={`${h.block}-${h.index}`} className="bg-ground p-4">
-              <p className="font-bold">{EVENT_TITLE[h.event] ?? h.event} <span className="font-normal text-muted">· block {h.block}</span></p>
-              <p className="break-words text-sm text-muted">{describe(h.event, h.args, accounts)}</p>
-            </li>
-          ))}
+          {row.history.map((h) => {
+            const st = EVENT_STYLE[h.event] ?? { Icon: IconTag, cls: "bg-surface-2 text-deep" };
+            return (
+              <li key={`${h.block}-${h.index}`} className="flex items-start gap-4 bg-ground p-4">
+                <span className={`grid size-11 shrink-0 place-items-center ${st.cls}`}>
+                  <st.Icon size={22} />
+                </span>
+                <div className="min-w-0">
+                  <p className="font-bold">{EVENT_TITLE[h.event] ?? h.event} <span className="font-normal text-muted">· block {h.block}</span></p>
+                  <p className="break-words text-sm text-muted">{describe(h.event, h.args, accounts)}</p>
+                </div>
+              </li>
+            );
+          })}
         </ol>
       </Panel>
     </>

@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
+import { OlvAmount, RoleAvatar } from "@/components/Icons";
 import { Callout, Chip } from "@/components/ui";
 import { getContract } from "@/lib/contracts";
 import { olv, same, short } from "@/lib/format";
 import { useLoad } from "@/lib/hooks";
-import { labelOf, loadAccounts, ROLE_KEYS } from "@/lib/roles";
+import { labelOf, loadAccounts, ROLE_KEYS, roleKeyFor } from "@/lib/roles";
 import { useWallet } from "@/lib/wallet";
 import { loadBatchRows } from "@/features/registry/data";
 
@@ -100,13 +101,16 @@ export function PeopleView() {
           return (
             <li key={p.address} className={`flex flex-col gap-4 p-6 ${active ? "bg-oil" : "bg-surface"}`}>
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="flex min-w-0 items-center gap-3">
+                  <RoleAvatar role={roleKeyFor(p.address, addresses)} size={52} />
+                  <div className="min-w-0">
                   <p className="text-2xl font-extrabold">{p.label}</p>
                   {p.index < ROLE_KEYS.length ? (
                     <p className="text-sm font-semibold text-muted">Demo role {p.index + 1} of 6</p>
                   ) : (
                     <p className="text-sm font-semibold text-muted">Extra account, holds OLV for testing</p>
                   )}
+                  </div>
                 </div>
                 {active && <Chip tone="dark">Acting now</Chip>}
               </div>
@@ -116,7 +120,7 @@ export function PeopleView() {
                 <Chip>{p.holds} batch{p.holds === 1 ? "" : "es"} held</Chip>
               </div>
               <dl className="grid gap-1 text-sm">
-                <div className="flex justify-between gap-3"><dt className="font-bold text-muted">OLV balance</dt><dd className="font-extrabold">{olv(p.olv)} OLV</dd></div>
+                <div className="flex justify-between gap-3"><dt className="font-bold text-muted">OLV balance</dt><dd className="font-extrabold"><OlvAmount value={olv(p.olv)} size={22} /></dd></div>
               </dl>
               <div className="flex flex-wrap items-center gap-2 font-mono text-sm">
                 <span className="break-all">{short(p.address)}</span>

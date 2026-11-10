@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Gate, Label } from "@/components/ui";
 import { TxNote } from "@/components/TxNote";
+import { OlvCoin } from "@/components/Icons";
 import { toOlv } from "@/lib/format";
 import { useSend, useTx } from "@/lib/hooks";
 import { ROLE_NAME, type RoleKey } from "@/lib/roles";
@@ -24,14 +25,17 @@ export function MintForm({
   return (
     <Gate allowed={!!account && isFarmer} reason={reason}>
       <p className="text-muted">The farmer registers an olive lot. It becomes one NFT, and the farmer holds it first.</p>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
+      <div className="grid min-w-0 gap-5">
+        <div className="grid min-w-0 gap-1.5">
           <Label htmlFor="mint-price">Declared price (OLV)</Label>
-          <input id="mint-price" className="field" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
+          <div className="relative max-w-xs">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center"><OlvCoin size={24} /></span>
+            <input id="mint-price" className="field" style={{ paddingLeft: "3.25rem" }} inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
+          </div>
         </div>
-        <div>
+        <div className="grid min-w-0 gap-1.5">
           <Label htmlFor="mint-uri">Batch description (variety, farm, harvest, litres)</Label>
-          <input id="mint-uri" className="field" value={uri} onChange={(e) => setUri(e.target.value)} />
+          <input id="mint-uri" className="field w-full min-w-0" value={uri} onChange={(e) => setUri(e.target.value)} />
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-4">

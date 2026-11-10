@@ -4,7 +4,9 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
 import { TxNote } from "@/components/TxNote";
+import { RoleAvatar } from "@/components/Icons";
 import { Label } from "@/components/ui";
+import type { RoleKey } from "@/lib/roles";
 import { postRecord } from "@/lib/api";
 import { getContract } from "@/lib/contracts";
 import { hashRecord, olv, same, short, toOlv, type CheckpointRecord } from "@/lib/format";
@@ -26,6 +28,7 @@ type CardProps = {
   what: string;
   expect: string;
   who: string;
+  role: RoleKey | null;
   address: string | null;
   account: string | null;
   onOliveChain: boolean;
@@ -61,6 +64,7 @@ export function StepCard(p: CardProps) {
       {(p.status === "active" || p.status === "optional") && (
         <>
           <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 bg-ground p-4">
+            <RoleAvatar role={p.role} size={36} />
             <span className="font-extrabold">Use the account: {p.who}</span>
             {p.address && (
               <>

@@ -6,7 +6,8 @@ import { useLoad } from "@/lib/hooks";
 import { useWallet } from "@/lib/wallet";
 import { useRoleAddresses } from "@/lib/roles";
 import { olv, same } from "@/lib/format";
-import { ACTOR_NAME, STEP_TEXT } from "./content";
+import { ACTOR_NAME, roleOfActor, STEP_TEXT } from "./content";
+import { RoleAvatar } from "@/components/Icons";
 import { loadScenario, RESTART_EVENT, startDemoFrom, type Scenario } from "./data";
 import { buildSteps, isComplete, prerequisite, REQUIRED, type Facts, type Status, type Step, type StepId } from "./logic";
 import {
@@ -143,6 +144,7 @@ export function JourneyView() {
         what={info.what}
         expect={info.expect}
         who={ACTOR_NAME[st.actor]}
+        role={roleOfActor(st.actor)}
         address={address}
         account={account}
         onOliveChain={onOliveChain}
@@ -207,6 +209,7 @@ export function JourneyView() {
                     } ${st.status === "waiting" ? "opacity-75" : ""}`}
                   >
                     <span aria-hidden className={`grid h-8 w-8 shrink-0 place-items-center font-bold ${BADGE_CLASS[st.status]}`}>{badge}</span>
+                    <RoleAvatar role={roleOfActor(st.actor)} size={32} />
                     <span className="min-w-0">
                       <span className="block font-bold leading-snug">{STEP_TEXT[st.id].title}</span>
                       <span className="block text-sm opacity-80">{ACTOR_NAME[st.actor]} · {STATUS_TEXT[st.status]}</span>
